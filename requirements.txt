@@ -4,5 +4,5 @@ matplotlib
 seaborn
 scikit-learn
 imbalanced-learn
-ipykernel
-notebook
+pyyaml
+joblib

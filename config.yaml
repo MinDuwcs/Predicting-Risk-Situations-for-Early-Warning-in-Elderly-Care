@@ -1,0 +1,41 @@
+# ============================================================
+# Elderly Care Fall Detection — Project Configuration
+# ============================================================
+
+random_state: 42
+test_size: 0.2
+cv_folds: 5
+
+smote:
+  strategy: "auto"        # balance minority to match majority
+  k_neighbors: 5
+
+paths:
+  raw_data: "data/raw/safety_monitoring.csv"
+  clean_data: "data/processed/safety_monitoring_CLEAN.csv"
+  train_data: "data/processed/train.csv"
+  test_data: "data/processed/test.csv"
+  models_dir: "models/"
+  reports_dir: "reports/"
+
+# Post-event features — MUST be removed (cause data leakage)
+post_event_features:
+  - "Post-Fall Inactivity Duration (Seconds)"
+  - "Alert Triggered (Yes/No)"
+  - "Caregiver Notified (Yes/No)"
+  - "Impact Force Level"
+
+# Columns with no predictive value
+drop_columns:
+  - "Device-ID/User-ID"
+  - "Timestamp"
+  - "Unnamed: 9"
+
+# Final pre-event features used for modeling
+features:
+  - "Movement Activity"
+  - "Location"
+  - "Hour"
+  - "Day_of_Week"
+
+target: "Fall Detected (Yes/No)"
