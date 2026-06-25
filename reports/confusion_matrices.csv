@@ -1,0 +1,6 @@
+Model,TN,FP,FN,TP
+Decision Tree,1668,232,39,61
+Gradient Boosting,1513,387,4,96
+Logistic Regression,1080,820,21,79
+Naive Bayes,1500,400,0,100
+Random Forest,1658,242,38,62

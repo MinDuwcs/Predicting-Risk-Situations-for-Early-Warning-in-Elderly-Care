@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Implementation Notes — Elderly Care Fall Detection</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --border: #334155;
+      --text: #e2e8f0;
+      --text-muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent2: #818cf8;
+      --success: #4ade80;
+      --warning: #fbbf24;
+      --danger: #f87171;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 2rem;
+      max-width: 960px;
+      margin: 0 auto;
+    }
+    h1 {
+      font-size: 1.8rem;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.5rem;
+    }
+    .subtitle { color: var(--text-muted); margin-bottom: 2rem; font-size: 0.95rem; }
+    h2 {
+      font-size: 1.3rem;
+      color: var(--accent);
+      margin: 2rem 0 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .phase-badge {
+      display: inline-block;
+      padding: 0.2rem 0.7rem;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-right: 0.5rem;
+    }
+    .phase-1 { background: #7c3aed33; color: #a78bfa; border: 1px solid #7c3aed55; }
+    .decision {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.2rem;
+      margin-bottom: 1rem;
+    }
+    .decision-title {
+      font-weight: 600;
+      font-size: 1.05rem;
+      margin-bottom: 0.5rem;
+    }
+    .decision-meta {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      margin-bottom: 0.8rem;
+    }
+    .tag {
+      display: inline-block;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-right: 0.3rem;
+    }
+    .tag-critical { background: #dc262633; color: var(--danger); }
+    .tag-design { background: #2563eb33; color: #60a5fa; }
+    .tag-deviation { background: #d9770633; color: var(--warning); }
+    .tag-tradeoff { background: #16a34a33; color: var(--success); }
+    ul { padding-left: 1.2rem; margin-top: 0.5rem; }
+    li { margin-bottom: 0.3rem; }
+    code {
+      background: #0f172acc;
+      padding: 0.15rem 0.4rem;
+      border-radius: 3px;
+      font-size: 0.9em;
+      color: var(--accent);
+    }
+    .status { float: right; font-size: 0.85rem; }
+    .status-done { color: var(--success); }
+    .status-pending { color: var(--warning); }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 0.8rem;
+    }
+    th, td {
+      padding: 0.5rem 0.8rem;
+      border: 1px solid var(--border);
+      text-align: left;
+      font-size: 0.9rem;
+    }
+    th { background: var(--surface); color: var(--accent); }
+    .highlight { background: #fbbf2422; }
+  </style>
+</head>
+<body>
+
+<h1>📋 Implementation Notes</h1>
+<p class="subtitle">Decisions, deviations, and tradeoffs — updated after each phase</p>
+
+<!-- ============================================ -->
+<h2><span class="phase-badge phase-1">Phase 1</span> Fix Data Correctness</h2>
+<p class="decision-meta">Date: 2026-06-25 &nbsp;|&nbsp; Status: <span class="status status-done">✅ Complete</span></p>
+
+<!-- Decision 1 -->
+<div class="decision">
+  <div class="decision-title">
+    <span class="tag tag-critical">CRITICAL</span>
+    #1 — Identified 4 post-event features (not 3)
+  </div>
+  <div class="decision-meta">Not in original spec — discovered during leakage analysis</div>
+  <p>The original notebook identified 3 post-event features. Analysis revealed <code>Impact Force Level</code> is also leaked:</p>
+  <table>
+    <tr><th>Feature</th><th>Evidence</th><th>Correlation with Target</th></tr>
+    <tr class="highlight"><td><code>Post-Fall Inactivity Duration</code></td><td>= 0 for ALL non-falls, &gt; 0 for ALL falls</td><td>1.000 (perfect)</td></tr>
+    <tr><td><code>Alert Triggered</code></td><td>= "No" for ALL non-falls</td><td>High (post-event trigger)</td></tr>
+    <tr><td><code>Caregiver Notified</code></td><td>= "No" for ALL non-falls</td><td>Identical to Alert Triggered</td></tr>
+    <tr class="highlight"><td><code>Impact Force Level</code></td><td>= "-" for ALL 9,501 non-falls</td><td>Perfect separator when binarized</td></tr>
+  </table>
+  <p style="margin-top:0.8rem"><strong>Decision:</strong> Remove all 4. This deviates from the original notebook which only removed 3 in Scenario B (Impact Force Level was dropped separately as "non-informative").</p>
+</div>
+
+<!-- Decision 2 -->
+<div class="decision">
+  <div class="decision-title">
+    <span class="tag tag-critical">CRITICAL</span>
+    #2 — SMOTE placement fix (within-fold, not before split)
+  </div>
+  <div class="decision-meta">Deviation from original notebook methodology</div>
+  <p><strong>Original notebook:</strong> Applied SMOTE to entire dataset (499→9,501) BEFORE train/test split. This means synthetic samples generated from the same minority records appear in both train and test → optimistic metrics.</p>
+  <p><strong>Phase 1 fix:</strong> SMOTE applied ONLY inside each CV fold's training set. Test/validation folds always use original data.</p>
+  <ul>
+    <li>This is the methodologically correct approach per the imbalanced-learn documentation</li>
+    <li>Expected result: metrics will drop significantly — this is honest, not a regression</li>
+  </ul>
+</div>
+
+<!-- Decision 3 -->
+<div class="decision">
+  <div class="decision-title">
+    <span class="tag tag-design">DESIGN</span>
+    #3 — Project restructure: notebook → Python scripts
+  </div>
+  <div class="decision-meta">Per user request — following Project_Structure.md</div>
+  <ul>
+    <li><code>data_pipeline.py</code> — data loading, cleaning, feature engineering, split</li>
+    <li><code>model_training.py</code> — 5-model CV with SMOTE-within-fold</li>
+    <li><code>model_evaluation.py</code> — test evaluation + CSV exports for PowerBI</li>
+    <li><code>predict.py</code> — load best model, predict on new data</li>
+    <li><code>config.yaml</code> — centralized configuration</li>
+  </ul>
+</div>
+
+<!-- Decision 4 -->
+<div class="decision">
+  <div class="decision-title">
+    <span class="tag tag-design">DESIGN</span>
+    #4 — PowerBI output format
+  </div>
+  <div class="decision-meta">CSV files in reports/ directory</div>
+  <p>All model outputs exported as flat CSVs for easy PowerBI import:</p>
+  <ul>
+    <li><code>cv_results.csv</code> — cross-validation mean/std metrics per model</li>
+    <li><code>cv_results_per_fold.csv</code> — per-fold metrics for detailed analysis</li>
+    <li><code>test_results.csv</code> — held-out test set metrics</li>
+    <li><code>feature_importances.csv</code> — feature importance per model</li>
+    <li><code>predictions.csv</code> — test set predictions + probabilities</li>
+    <li><code>confusion_matrices.csv</code> — TN/FP/FN/TP per model</li>
+    <li><code>metric_comparison.csv</code> — original notebook vs Phase 1 comparison</li>
+  </ul>
+</div>
+
+<!-- Decision 5 -->
+<div class="decision">
+  <div class="decision-title">
+    <span class="tag tag-tradeoff">TRADEOFF</span>
+    #5 — Label encoding vs one-hot encoding
+  </div>
+  <div class="decision-meta">Preserved original notebook's approach</div>
+  <p>Used <code>LabelEncoder</code> for <code>Movement Activity</code> and <code>Location</code> (same as original notebook). One-hot encoding would be more correct for nominal features but would increase feature count from 4 to ~10. Kept label encoding for consistency; can revisit in Phase 2 (feature engineering).</p>
+</div>
+
+<!-- Decision 6 -->
+<div class="decision">
+  <div class="decision-title">
+    <span class="tag tag-tradeoff">TRADEOFF</span>
+    #6 — Clean CSV saved before encoding
+  </div>
+  <p><code>safety_monitoring_CLEAN.csv</code> is saved with human-readable categorical values (before label encoding). Train/test splits are saved with encoded values. This preserves data lineage: raw → clean (readable) → encoded (model-ready).</p>
+</div>
+
+<!-- Metrics filled after pipeline execution -->
+<div class="decision">
+  <div class="decision-title">
+    <span class="tag tag-deviation">METRICS</span>
+    #7 — Phase 1 metric results (actual)
+  </div>
+  <div class="decision-meta">Pipeline executed: 2026-06-25</div>
+  <p><strong>CV Results (SMOTE-within-fold, 5-fold stratified):</strong></p>
+  <table>
+    <tr><th>Rank</th><th>Model</th><th>F1 (mean±std)</th><th>AUC (mean±std)</th></tr>
+    <tr><td>🥇</td><td>Naive Bayes</td><td>0.3333 ± 0.0061</td><td>0.8933 ± 0.0047</td></tr>
+    <tr><td>🥈</td><td>Gradient Boosting</td><td>0.3316 ± 0.0068</td><td>0.8888 ± 0.0073</td></tr>
+    <tr><td>🥉</td><td>Random Forest</td><td>0.2962 ± 0.0255</td><td>0.8754 ± 0.0110</td></tr>
+    <tr><td>4</td><td>Decision Tree</td><td>0.2935 ± 0.0289</td><td>0.7476 ± 0.0196</td></tr>
+    <tr><td>5</td><td>Logistic Regression</td><td>0.1540 ± 0.0124</td><td>0.6335 ± 0.0031</td></tr>
+  </table>
+  <p style="margin-top:0.8rem"><strong>Key observations:</strong></p>
+  <ul>
+    <li>F1 dropped from ~0.93 → ~0.33 (−0.60) — confirms both leakage and SMOTE placement issues</li>
+    <li>AUC is relatively stable (~0.87–0.90) — models can rank risk but precision suffers at 0.5 threshold</li>
+    <li>Naive Bayes overtakes Random Forest as best model by F1 — perfect recall (1.0) but only 0.20 precision</li>
+    <li>All models have precision ~0.20 — reflecting the 5% base rate and weak pre-event features</li>
+  </ul>
+</div>
+
+</body>
+</html>

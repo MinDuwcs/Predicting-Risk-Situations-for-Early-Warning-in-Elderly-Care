@@ -1,0 +1,14 @@
+{
+  "Movement Activity": {
+    "Lying": 0,
+    "No Movement": 1,
+    "Sitting": 2,
+    "Walking": 3
+  },
+  "Location": {
+    "Bathroom": 0,
+    "Bedroom": 1,
+    "Kitchen": 2,
+    "Living Room": 3
+  }
+}

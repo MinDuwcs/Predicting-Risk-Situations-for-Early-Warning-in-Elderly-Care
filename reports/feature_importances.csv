@@ -1,0 +1,17 @@
+Model,Feature,Importance
+Decision Tree,Movement Activity,0.8042598334212798
+Decision Tree,Location,0.039233810973623384
+Decision Tree,Hour,0.08239854760390786
+Decision Tree,Day_of_Week,0.07410780800118895
+Gradient Boosting,Movement Activity,0.9767459654043369
+Gradient Boosting,Location,0.00570580288045654
+Gradient Boosting,Hour,0.010834585953602429
+Gradient Boosting,Day_of_Week,0.006713645761604047
+Logistic Regression,Movement Activity,0.830801822704514
+Logistic Regression,Location,0.1507516963808881
+Logistic Regression,Hour,0.005165205907823093
+Logistic Regression,Day_of_Week,0.05878557538425785
+Random Forest,Movement Activity,0.7765634286112406
+Random Forest,Location,0.026287580902160154
+Random Forest,Hour,0.15012543151104862
+Random Forest,Day_of_Week,0.047023558975550675
